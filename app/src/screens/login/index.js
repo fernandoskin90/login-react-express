@@ -17,8 +17,8 @@ const Login = ({
   history
 }) => {
   const [loadingForm, setLoadingForm] = useState(false);
-  const [email, setEmail] = useState('f@mail.com');
-  const [password, setPassword] = useState('1234');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const {
     loading,
@@ -41,7 +41,6 @@ const Login = ({
     })
       .then(res => res.json())
       .then(({ data, message }) => {
-        console.log({ data })
         setLoadingForm(false);
         if (data && data.token) {
           setUserToken(
