@@ -1,15 +1,10 @@
 const express = require('express');
-const bcryot = require('bcryptjs');
-const passport = require('passport');
+const bcrypt = require('bcryptjs');
 
 const routerUser = express.Router();
 const User = require('../mongo/models/User');
-
-// login
-routerUser.get('/login', (req, res) => res.send('login'));
-
-// Register
-routerUser.get('/register', (req, res) => res.send('Register'));
+const { generateToken } = require('../utils/session');
+const { validateUserByToken } = require('../config/auth');
 
 routerUser.post('/register', async (req, res) => {
   try {
@@ -17,7 +12,8 @@ routerUser.post('/register', async (req, res) => {
     const user = await User.findOne({ email });
     if (user) {
       res.status(200).json({
-        msg: 'el email ya se encuentra registrado'
+        data: null,
+        message: 'Email registered'
       });
     } else {
       const newUser = new User({
@@ -27,37 +23,69 @@ routerUser.post('/register', async (req, res) => {
         userName
       });
       // Hash password
-      bcryot.genSalt(10, (err, salt) =>
-        bcryot.hash(newUser.password, salt, async (err, hash) => {
+      bcrypt.genSalt(10, (err, salt) =>
+        bcrypt.hash(newUser.password, salt, async (err, hash) => {
           if (err) throw err;
           newUser.password = hash;
           await newUser.save();
-          // TODO: hacer redirección
           res.status(200).json({
-            msg: 'Usuario registrado correctamente',
-            name: newUser.name
+            data: {
+              name: newUser.name,
+              token: generateToken(newUser)
+            },
+            message: ''
           });
         })
       );
     }
   } catch (error) {
     res.status(500).json({
-      msg: 'error regisstrando al usuario'
+      data: null,
+      message: 'Error registering user'
     });
   }
 });
 
 // Handle login
-routerUser.post('/login', (req, res, next) => {
-  passport.authenticate('local', {
-    successRedirect: '/data',
-    failureRedirect: '/user/login'
-  })(req, res, next);
+routerUser.post('/login', async (req, res, next) => {
+  const { email, password } = req.body;
+  const user = await User.findOne({ email });
+  if (!user) {
+    res.json({
+      data: null,
+      message: "Email user doesn't exist"
+    })
+  } else {
+    // Match password
+    bcrypt.compare(password, user.password, (err, isMatch) => {
+      if (err) return err;
+      if (isMatch) {
+        res.json({
+          data: {
+            email: user.email,
+            name: user.name,
+            token: generateToken(user)
+          },
+          message: '',
+        });
+      } else {
+        res.json({
+          data: null,
+          message: 'Invalid password'
+        });
+      }
+    });
+  }
+
 });
 
-routerUser.get('/logout', (req, res) => {
-  req.logout();
-  res.redirect('/user/login');
-});
+routerUser.post('/authByToken', validateUserByToken,  (req, res) => {
+  res.json({
+    data: {
+      userValid: true
+    },
+    message: ''
+  })
+})
 
 module.exports = routerUser;

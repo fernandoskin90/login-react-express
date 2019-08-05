@@ -10,9 +10,9 @@ const connectMongo = () => {
       reconnectInterval: 500 // Reconnect every 500ms,
     })
     .then(() => {
-      console.log('mongoose is ready');
+      console.log('Mongoose is ready');
     })
-    .catch(console.error.bind(console, 'mongoose connection error: '));
+    .catch(console.error.bind(console, 'Mongoose connection error: '));
 };
 
 module.exports = connectMongo;
